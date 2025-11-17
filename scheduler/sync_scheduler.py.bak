@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 import psycopg2
 from psycopg2.extras import RealDictCursor
-import pyodbc
+import pymssql
 
 # Setup logging - Docker path
 LOG_FILE = '/app/logs/sync_scheduler.log'
@@ -44,17 +44,13 @@ def get_pg_connection():
     return psycopg2.connect(**DB_CONFIG)
 
 def get_mssql_connection():
-    """Connect to MSSQL using pyodbc"""
-    conn_str = (
-        f"DRIVER={{FreeTDS}};"
-        f"SERVER={MSSQL_CONFIG['host']};"
-        f"PORT={MSSQL_CONFIG['port']};"
-        f"DATABASE={MSSQL_CONFIG['database']};"
-        f"UID={MSSQL_CONFIG['user']};"
-        f"PWD={MSSQL_CONFIG['password']};"
-        f"TDS_Version=7.4;"
+    return pymssql.connect(
+        server=MSSQL_CONFIG['host'],
+        port=MSSQL_CONFIG['port'],
+        user=MSSQL_CONFIG['user'],
+        password=MSSQL_CONFIG['password'],
+        database=MSSQL_CONFIG['database']
     )
-    return pyodbc.connect(conn_str)
 
 def convert_value(val):
     """Convert special types for PostgreSQL"""
@@ -78,15 +74,10 @@ def sync_table(schema, table, schedule_name):
         
         # 1. Get data from MSSQL
         mssql_conn = get_mssql_connection()
-        mssql_cursor = mssql_conn.cursor()
+        mssql_cursor = mssql_conn.cursor(as_dict=True)
         
         query = f"SELECT * FROM [{schema}].[{table}]"
         mssql_cursor.execute(query)
-        
-        # Get column names
-        columns = [column[0] for column in mssql_cursor.description]
-        
-        # Fetch all rows
         rows = mssql_cursor.fetchall()
         
         mssql_cursor.close()
@@ -100,9 +91,10 @@ def sync_table(schema, table, schedule_name):
         logger.info(f"[{schedule_name}] Fetched {records_count} records from MSSQL")
         
         # 2. Convert data
+        columns = list(rows[0].keys())
         converted_rows = []
         for row in rows:
-            converted_row = {col: convert_value(val) for col, val in zip(columns, row)}
+            converted_row = {col: convert_value(row[col]) for col in columns}
             converted_rows.append(converted_row)
         
         # 3. Truncate PostgreSQL
