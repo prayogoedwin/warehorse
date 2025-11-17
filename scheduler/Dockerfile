@@ -31,15 +31,15 @@ Setup = /usr/lib/x86_64-linux-gnu/odbc/libtdsS.so" > /etc/odbcinst.ini
 WORKDIR /app
 
 # Copy requirements
-# COPY requirements.txt .
+COPY requirements.txt .
 
 # Install Python packages
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
 # Copy application files
-# COPY sync_scheduler.py .
-# COPY run_scheduler.sh .
+COPY sync_scheduler.py .
+COPY run_scheduler.sh .
 
 # Create logs directory
 RUN mkdir -p /app/logs
