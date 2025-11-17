@@ -29,15 +29,15 @@ Driver = /usr/lib/libtdsodbc.so\n" > /etc/odbcinst.ini
 WORKDIR /app
 
 # Copy requirements
-COPY requirements_pyodbc.txt requirements.txt
+# COPY requirements_pyodbc.txt requirements.txt
 
 # Install Python packages
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
 # Copy application files
-COPY sync_scheduler_pyodbc.py sync_scheduler.py
-COPY run_scheduler.sh .
+# COPY sync_scheduler_pyodbc.py sync_scheduler.py
+# COPY run_scheduler.sh .
 
 # Create logs directory
 RUN mkdir -p /app/logs
