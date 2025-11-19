@@ -59,15 +59,15 @@ class DatabaseManager:
         import pyodbc
         
         conn_str = (
-            f"DRIVER={{FreeTDS}};"
-            f"SERVER={MSSQL_CONFIG['host']};"
-            f"PORT={MSSQL_CONFIG['port']};"
-            f"DATABASE={MSSQL_CONFIG['database']};"
-            f"UID={MSSQL_CONFIG['user']};"
-            f"PWD={MSSQL_CONFIG['password']};"
-            f"TDS_Version=7.4;"
+            "DRIVER={FreeTDS};"
+            "SERVER=103.107.245.123;"
+            "PORT=1433;"
+            "DATABASE=Datamart;"
+            "UID=u_mila;"
+            "PWD=18BFD5D9-5D33-48E1-B0AE-A13E6979FBA1;"
+            "TDS_Version=7.4;"
         )
-        return pyodbc.connect(conn_str)
+        return pyodbc.connect(conn_str, timeout=30)
     
     @staticmethod
     def execute_query(query, params=None, fetch=False):
