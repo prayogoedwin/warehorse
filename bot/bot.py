@@ -67,7 +67,7 @@ class DatabaseManager:
             f"PWD={MSSQL_CONFIG['password']};"
             f"TDS_Version=7.4;"
         )
-        return pyodbc.connect(conn_str, timeout=30)
+        return pyodbc.connect(conn_str)
     
     @staticmethod
     def execute_query(query, params=None, fetch=False):
