@@ -55,32 +55,31 @@ class DatabaseManager:
     
     @staticmethod
     def get_mssql_connection():
-        """Get MSSQL connection using pyodbc - DEBUG VERSION"""
+        """Get MSSQL connection using pyodbc"""
         import pyodbc
-        import logging
+        import os
         
-        logger = logging.getLogger(__name__)
+        # Debug: Print env values
+        # logger.info("=" * 50)
+        # logger.info("DEBUG MSSQL_CONFIG from env:")
+        # logger.info(f"  DB_HOST_TARGET = '{os.getenv('DB_HOST_TARGET')}'")
+        # logger.info(f"  DB_PORT_TARGET = '{os.getenv('DB_PORT_TARGET')}'")
+        # logger.info(f"  DB_NAME_TARGET = '{os.getenv('DB_NAME_TARGET')}'")
+        # logger.info(f"  DB_USER_TARGET = '{os.getenv('DB_USER_TARGET')}'")
+        # logger.info(f"  DB_PASSWORD_TARGET = {'***' if os.getenv('DB_PASSWORD_TARGET') else 'EMPTY!'}")
         
-        # Log MSSQL_CONFIG values
-        logger.info("="*50)
-        logger.info("DEBUG: MSSQL_CONFIG values:")
-        logger.info(f"  host: '{MSSQL_CONFIG.get('host')}'")
-        logger.info(f"  port: '{MSSQL_CONFIG.get('port')}'")
-        logger.info(f"  database: '{MSSQL_CONFIG.get('database')}'")
-        logger.info(f"  user: '{MSSQL_CONFIG.get('user')}'")
-        logger.info(f"  password: {'***' if MSSQL_CONFIG.get('password') else 'EMPTY!'}")
+        # Get from env directly (bypass MSSQL_CONFIG)
+        host = os.getenv('DB_HOST_TARGET', '')
+        port = os.getenv('DB_PORT_TARGET', '')
+        database = os.getenv('DB_NAME_TARGET', '')
+        user = os.getenv('DB_USER_TARGET', '')
+        password = os.getenv('DB_PASSWORD_TARGET', '')
         
-        # HARDCODED - bypass MSSQL_CONFIG completely
-        host = "103.107.245.123"
-        port = "1433"
-        database = "Datamart"
-        user = "u_mila"
-        password = "18BFD5D9-5D33-48E1-B0AE-A13E6979FBA1"
+        # logger.info(f"DEBUG: host='{host}', port='{port}', db='{database}'")
         
-        logger.info("DEBUG: Using hardcoded values:")
-        logger.info(f"  host: {host}")
-        logger.info(f"  port: {port}")
-        logger.info(f"  database: {database}")
+        if not host or not port or not database or not user or not password:
+            logger.error("❌ MSSQL env variables are EMPTY!")
+            raise ValueError("MSSQL configuration incomplete - check environment variables")
         
         conn_str = (
             f"DRIVER={{FreeTDS}};"
@@ -92,15 +91,15 @@ class DatabaseManager:
             f"TDS_Version=7.4;"
         )
         
-        logger.info(f"DEBUG: Connection string: {conn_str.replace(password, '***')}")
-        logger.info("DEBUG: Attempting connection...")
+        logger.info(f"Connection string: {conn_str.replace(password, '***')}")
+        logger.info("Attempting connection...")
         
         try:
             conn = pyodbc.connect(conn_str)
-            logger.info("DEBUG: ✅ Connection SUCCESS!")
+            logger.info("✅ Connected to MSSQL successfully!")
             return conn
         except Exception as e:
-            logger.error(f"DEBUG: ❌ Connection FAILED: {e}")
+            logger.error(f"❌ Connection failed: {e}")
             raise
     
     @staticmethod
