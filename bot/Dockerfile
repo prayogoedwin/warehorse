@@ -1,24 +1,37 @@
 FROM python:3.11-slim
 
-# Set timezone to Asia/Jakarta
+# Set timezone
 ENV TZ=Asia/Jakarta
-
-WORKDIR /app
+ENV DEBIAN_FRONTEND=noninteractive
 
 # Install dependencies
 RUN apt-get update && apt-get install -y \
     gcc \
-    postgresql-client \
+    g++ \
+    libpq-dev \
+    unixodbc \
+    unixodbc-dev \
+    freetds-bin \
+    freetds-dev \
+    tdsodbc \
+    && ln -sf /usr/share/zoneinfo/Asia/Jakarta /etc/localtime \
+    && echo "Asia/Jakarta" > /etc/timezone \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements
+# Configure FreeTDS
+RUN echo "[FreeTDS]\n\
+Description = FreeTDS Driver\n\
+Driver = /usr/lib/x86_64-linux-gnu/odbc/libtdsodbc.so\n\
+Setup = /usr/lib/x86_64-linux-gnu/odbc/libtdsS.so" > /etc/odbcinst.ini
+
+WORKDIR /app
+
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy bot code
-COPY . .
+COPY bot.py .
 
-# Create data directory
 RUN mkdir -p /app/data
 
-CMD ["python", "bot.py"]
+CMD ["python", "-u", "bot.py"]

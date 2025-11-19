@@ -55,19 +55,15 @@ class DatabaseManager:
     
     @staticmethod
     def get_mssql_connection():
-        """Get MSSQL connection using pyodbc (lebih stabil dari pymssql)"""
-        import pyodbc
-        
-        conn_str = (
-            f"DRIVER={{FreeTDS}};"
-            f"SERVER={MSSQL_CONFIG['host']};"
-            f"PORT={MSSQL_CONFIG['port']};"
-            f"DATABASE={MSSQL_CONFIG['database']};"
-            f"UID={MSSQL_CONFIG['user']};"
-            f"PWD={MSSQL_CONFIG['password']};"
-            f"TDS_Version=7.4;"
+        """Get MSSQL connection using pymssql"""
+        import pymssql
+        return pymssql.connect(
+            server=MSSQL_CONFIG['host'],
+            port=MSSQL_CONFIG['port'],
+            user=MSSQL_CONFIG['user'],
+            password=MSSQL_CONFIG['password'],
+            database=MSSQL_CONFIG['database']
         )
-        return pyodbc.connect(conn_str, timeout=30)
     
     @staticmethod
     def execute_query(query, params=None, fetch=False):
@@ -110,33 +106,27 @@ class DatabaseManager:
             # 1. Get data from MSSQL
             logger.info(f"Fetching data from MSSQL: {schema}.{table}")
             mssql_conn = DatabaseManager.get_mssql_connection()
-            mssql_cursor = mssql_conn.cursor()
+            mssql_cursor = mssql_conn.cursor(as_dict=True)
             
             query_mssql = f"SELECT * FROM [{schema}].[{table}]"
             mssql_cursor.execute(query_mssql)
+            rows = mssql_cursor.fetchall()
             
-            # Get column names dari cursor.description
-            columns = [column[0] for column in mssql_cursor.description]
+            if not rows:
+                mssql_cursor.close()
+                mssql_conn.close()
+                return (True, "Tabel kosong, tidak ada data untuk disinkronkan", 0)
             
-            # Fetch all rows
-            raw_rows = mssql_cursor.fetchall()
+            records_count = len(rows)
+            logger.info(f"Fetched {records_count} records from MSSQL")
+            
+            # 2. Get column names
+            columns = list(rows[0].keys())
             
             mssql_cursor.close()
             mssql_conn.close()
             
-            if not raw_rows:
-                return (True, "Tabel kosong, tidak ada data untuk disinkronkan", 0)
-            
-            records_count = len(raw_rows)
-            logger.info(f"Fetched {records_count} records from MSSQL")
-            
-            # 2. Convert rows to dict format
-            rows = []
-            for raw_row in raw_rows:
-                row_dict = {col: val for col, val in zip(columns, raw_row)}
-                rows.append(row_dict)
-            
-            # 3. Convert all values
+            # 3. Convert all rows
             converted_rows = []
             for row in rows:
                 converted_row = {col: convert_value(row[col]) for col in columns}
@@ -672,9 +662,19 @@ def main():
     
     application.add_handler(CommandHandler("schedule", schedule_router))
     
-    async def stop_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
-        await stop_bot(update, context)
+    async def run_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        if context.args and context.args[0].lower() == "sync":
+            await run_sync(update, context)
+        else:
+            await update.message.reply_text("Format: /run Sync")
     
+    async def stop_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        if context.args and context.args[0].lower() == "sync":
+            await stop_sync(update, context)
+        else:
+            await stop_bot(update, context)
+    
+    application.add_handler(CommandHandler("run", run_router))
     application.add_handler(CommandHandler("stop", stop_router))
     
     async def post_init(application: Application):
@@ -683,6 +683,7 @@ def main():
             BotCommand("info", "Status sinkronisasi"),
             BotCommand("schedule", "Kelola jadwal"),
             BotCommand("sync", "Sync manual per tabel"),
+            BotCommand("run", "Jalankan sync penuh"),
             BotCommand("stop", "Hentikan"),
         ])
     
