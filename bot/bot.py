@@ -55,19 +55,53 @@ class DatabaseManager:
     
     @staticmethod
     def get_mssql_connection():
-        """Get MSSQL connection using pyodbc (lebih stabil dari pymssql)"""
+        """Get MSSQL connection using pyodbc - DEBUG VERSION"""
         import pyodbc
+        import logging
+        
+        logger = logging.getLogger(__name__)
+        
+        # Log MSSQL_CONFIG values
+        logger.info("="*50)
+        logger.info("DEBUG: MSSQL_CONFIG values:")
+        logger.info(f"  host: '{MSSQL_CONFIG.get('host')}'")
+        logger.info(f"  port: '{MSSQL_CONFIG.get('port')}'")
+        logger.info(f"  database: '{MSSQL_CONFIG.get('database')}'")
+        logger.info(f"  user: '{MSSQL_CONFIG.get('user')}'")
+        logger.info(f"  password: {'***' if MSSQL_CONFIG.get('password') else 'EMPTY!'}")
+        
+        # HARDCODED - bypass MSSQL_CONFIG completely
+        host = "103.107.245.123"
+        port = "1433"
+        database = "Datamart"
+        user = "u_mila"
+        password = "18BFD5D9-5D33-48E1-B0AE-A13E6979FBA1"
+        
+        logger.info("DEBUG: Using hardcoded values:")
+        logger.info(f"  host: {host}")
+        logger.info(f"  port: {port}")
+        logger.info(f"  database: {database}")
         
         conn_str = (
-            "DRIVER={FreeTDS};"
-            "SERVER=103.107.245.123;"
-            "PORT=1433;"
-            "DATABASE=Datamart;"
-            "UID=u_mila;"
-            "PWD=18BFD5D9-5D33-48E1-B0AE-A13E6979FBA1;"
-            "TDS_Version=7.4;"
+            f"DRIVER={{FreeTDS}};"
+            f"SERVER={host};"
+            f"PORT={port};"
+            f"DATABASE={database};"
+            f"UID={user};"
+            f"PWD={password};"
+            f"TDS_Version=7.4;"
         )
-        return pyodbc.connect(conn_str, timeout=30)
+        
+        logger.info(f"DEBUG: Connection string: {conn_str.replace(password, '***')}")
+        logger.info("DEBUG: Attempting connection...")
+        
+        try:
+            conn = pyodbc.connect(conn_str)
+            logger.info("DEBUG: ✅ Connection SUCCESS!")
+            return conn
+        except Exception as e:
+            logger.error(f"DEBUG: ❌ Connection FAILED: {e}")
+            raise
     
     @staticmethod
     def execute_query(query, params=None, fetch=False):
